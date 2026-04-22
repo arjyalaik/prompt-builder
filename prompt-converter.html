@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptForge — Craft Better AI Prompts</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a3a;
+    --accent: #e8ff47;
+    --accent2: #7c6fff;
+    --text: #f0f0f8;
+    --muted: #666680;
+    --danger: #ff5e5e;
+
+    --chatgpt: #10a37f;
+    --gemini: #4285f4;
+    --claude: #d97757;
+    --grok: #ffffff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,111,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,111,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 40px 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 56px 0 40px;
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+    position: relative;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── Tool Selector ── */
+  .tool-selector {
+    margin: 40px 0 32px;
+  }
+
+  .tool-selector label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .tools-grid {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tool-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .tool-btn:hover { border-color: var(--muted); color: var(--text); transform: translateY(-2px); }
+
+  .tool-btn.active {
+    color: var(--text);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.5);
+  }
+
+  .tool-btn[data-tool="chatgpt"].active { border-color: var(--chatgpt); background: rgba(16,163,127,0.1); }
+  .tool-btn[data-tool="gemini"].active  { border-color: var(--gemini);  background: rgba(66,133,244,0.1); }
+  .tool-btn[data-tool="claude"].active  { border-color: var(--claude);  background: rgba(217,119,87,0.1); }
+  .tool-btn[data-tool="grok"].active    { border-color: #888; background: rgba(255,255,255,0.05); }
+
+  .tool-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Main Workspace ── */
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 700px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .char-count {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.8;
+    padding: 20px;
+    resize: none;
+    min-height: 280px;
+    caret-color: var(--accent);
+  }
+
+  textarea::placeholder { color: var(--muted); font-style: italic; }
+
+  textarea:focus { box-shadow: inset 0 0 0 2px rgba(232,255,71,0.12); }
+
+  /* ── Options Row ── */
+  .options-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .option-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+  }
+
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666680' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    transition: border-color 0.2s;
+  }
+
+  select:hover, select:focus { border-color: var(--accent2); }
+
+  /* ── Convert Button ── */
+  .convert-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 28px;
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .convert-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+  }
+
+  .convert-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -4px rgba(232,255,71,0.35); }
+  .convert-btn:active { transform: translateY(0); }
+  .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .convert-btn .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .convert-btn.loading .spinner { display: block; }
+  .convert-btn.loading .btn-text { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Output Panel ── */
+  #output-panel {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.4s ease;
+    pointer-events: none;
+  }
+
+  #output-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .output-content {
+    padding: 20px;
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 280px;
+    position: relative;
+  }
+
+  .output-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover { border-color: var(--text); color: var(--text); }
+  .action-btn.success { border-color: var(--chatgpt); color: #10a37f; }
+
+  /* ── Prompt Tips ── */
+  .tips-section {
+    margin-bottom: 60px;
+  }
+
+  .tips-header {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .tip-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tip-chip:hover { border-color: var(--accent2); color: var(--text); transform: translateY(-1px); }
+  .tip-chip .tip-icon { font-size: 16px; flex-shrink: 0; }
+
+  /* ── History ── */
+  .history-section { margin-bottom: 60px; }
+
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .history-item:hover { border-color: var(--muted); }
+
+  .history-item .h-tool { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px; min-width: 60px; }
+  .history-item .h-text { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .history-item .h-time { color: var(--muted); font-size: 11px; }
+
+  /* ── Typing effect ── */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent); animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 2px; }
+
+  /* ── Glowing border on active tool panels ── */
+  .workspace .panel.input-panel { border-color: var(--border); }
+
+  /* ── API Key Bar ── */
+  .api-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .api-bar label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .api-key-input {
+    flex: 1;
+    min-width: 180px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 7px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .api-key-input:focus { border-color: var(--accent2); }
+  .api-key-input::placeholder { color: var(--muted); letter-spacing: 0; }
+
+  .api-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .api-status.live   { color: #10a37f; border-color: rgba(16,163,127,0.3); background: rgba(16,163,127,0.06); }
+  .api-status.offline { color: var(--muted); border-color: var(--border); }
+  .api-status.fallback { color: #f0a500; border-color: rgba(240,165,0,0.3); background: rgba(240,165,0,0.06); }
+  .api-status .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .mode-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .mode-tag.ai-mode { background: rgba(16,163,127,0.15); color: #10a37f; }
+  .mode-tag.offline-mode { background: rgba(124,111,255,0.15); color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Prompt<span>Forge</span></div>
+    </div>
+    <div class="badge">v1.0</div>
+  </header>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Turn raw thoughts into<br><em>precision prompts</em></h1>
+    <p>Paste any unstructured idea, note, or draft — and get a clean, optimised prompt tailored for your AI tool of choice.</p>
+  </div>
+
+  <!-- API Key Bar -->
+  <div class="api-bar">
+    <label>🔑 Anthropic API Key</label>
+    <input type="password" class="api-key-input" id="api-key-input"
+      placeholder="sk-ant-... (optional — leave blank for offline mode)"
+      oninput="onApiKeyChange()" />
+    <div class="api-status offline" id="api-status">
+      <span class="dot"></span> <span id="api-status-text">Offline mode</span>
+    </div>
+    <span class="mode-tag offline-mode" id="mode-tag">Template</span>
+  </div>
+
+  <!-- Tool Selector -->
+  <div class="tool-selector">
+    <label>Target AI Tool</label>
+    <div class="tools-grid">
+      <button class="tool-btn active" data-tool="chatgpt">
+        <span class="tool-dot" style="background:#10a37f"></span> ChatGPT
+      </button>
+      <button class="tool-btn" data-tool="gemini">
+        <span class="tool-dot" style="background:#4285f4"></span> Gemini
+      </button>
+      <button class="tool-btn" data-tool="claude">
+        <span class="tool-dot" style="background:#d97757"></span> Claude
+      </button>
+      <button class="tool-btn" data-tool="grok">
+        <span class="tool-dot" style="background:#aaa"></span> Grok
+      </button>
+    </div>
+  </div>
+
+  <!-- Options Row -->
+  <div class="options-row">
+    <div class="option-group">
+      <label>Task Type</label>
+      <select id="task-type">
+        <option value="general">General / Open</option>
+        <option value="writing">Writing & Editing</option>
+        <option value="coding">Coding & Technical</option>
+        <option value="analysis">Analysis & Research</option>
+        <option value="creative">Creative & Brainstorm</option>
+        <option value="summarize">Summarise</option>
+        <option value="qa">Q&A / Explain</option>
+        <option value="email">Email / Communication</option>
+        <option value="plan">Planning & Strategy</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>Tone</label>
+      <select id="tone">
+        <option value="professional">Professional</option>
+        <option value="casual">Casual & Friendly</option>
+        <option value="concise">Concise & Direct</option>
+        <option value="detailed">Detailed & Thorough</option>
+        <option value="academic">Academic</option>
+        <option value="creative">Creative & Expressive</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>Output Format</label>
+      <select id="output-format">
+        <option value="freeform">Free-form prose</option>
+        <option value="bullets">Bullet points</option>
+        <option value="numbered">Numbered list</option>
+        <option value="table">Table</option>
+        <option value="json">JSON</option>
+        <option value="code">Code block</option>
+        <option value="markdown">Markdown doc</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>Detail Level</label>
+      <select id="detail">
+        <option value="concise">Concise</option>
+        <option value="moderate">Moderate</option>
+        <option value="thorough">Thorough</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Workspace -->
+  <div class="workspace">
+    <!-- Input Panel -->
+    <div class="panel input-panel">
+      <div class="panel-header">
+        <span class="panel-title">✏ Raw Input</span>
+        <span class="char-count" id="char-count">0 chars</span>
+      </div>
+      <textarea id="input-text" placeholder="Paste your raw idea, rough notes, or unstructured request here...
+
+e.g. 'i want to make a blog about cooking, healthy recipes for busy people, should be fun, maybe add some science about nutrition, want to grow it on instagram too'" rows="12"></textarea>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="panel" id="output-panel">
+      <div class="panel-header">
+        <span class="panel-title" id="output-label">✦ Crafted Prompt</span>
+        <span class="char-count" id="output-char-count"></span>
+      </div>
+      <div class="output-content" id="output-text"></div>
+      <div class="output-actions">
+        <button class="action-btn" id="copy-btn" onclick="copyPrompt()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+        <button class="action-btn" onclick="regenerate()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+          Regenerate
+        </button>
+        <button class="action-btn" onclick="clearAll()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Clear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Convert Button -->
+  <button class="convert-btn" id="convert-btn" onclick="convertPrompt()">
+    <div class="spinner"></div>
+    <span class="btn-text">⚡ Forge Prompt</span>
+  </button>
+
+  <!-- Quick Tips / Injectors -->
+  <div class="tips-section">
+    <div class="tips-header">Quick Enhancers — click to append</div>
+    <div class="tips-grid" id="tips-grid">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="tips-header">Recent Prompts</div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* =========================================================
+   STATE & API KEY
+   ========================================================= */
+let selectedTool = 'chatgpt';
+let history = JSON.parse(localStorage.getItem('pf_history') || '[]');
+let lastInput = '';
+let apiKey = localStorage.getItem('pf_apikey') || '';
+
+// Restore saved key on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (apiKey) {
+    document.getElementById('api-key-input').value = apiKey;
+    setApiStatus('live');
+  }
+  renderHistory();
+});
+
+function onApiKeyChange() {
+  apiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('pf_apikey', apiKey);
+  setApiStatus(apiKey ? 'live' : 'offline');
+}
+
+function setApiStatus(state) {
+  const el = document.getElementById('api-status');
+  const txt = document.getElementById('api-status-text');
+  const tag = document.getElementById('mode-tag');
+  el.className = 'api-status ' + state;
+  if (state === 'live')     { txt.textContent = 'API ready';      tag.textContent = 'AI';       tag.className = 'mode-tag ai-mode'; }
+  if (state === 'offline')  { txt.textContent = 'Offline mode';   tag.textContent = 'Template'; tag.className = 'mode-tag offline-mode'; }
+  if (state === 'fallback') { txt.textContent = 'Used fallback';  tag.textContent = 'Template'; tag.className = 'mode-tag offline-mode'; }
+}
+
+/* =========================================================
+   TOOL SELECTOR
+   ========================================================= */
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedTool = btn.dataset.tool;
+  });
+});
+
+/* =========================================================
+   CHAR COUNT
+   ========================================================= */
+const inputEl = document.getElementById('input-text');
+inputEl.addEventListener('input', () => {
+  document.getElementById('char-count').textContent = inputEl.value.length + ' chars';
+});
+
+/* =========================================================
+   QUICK ENHANCERS
+   ========================================================= */
+const tips = [
+  { icon: '🎯', label: 'Add role context',    text: 'Act as an expert in this field.' },
+  { icon: '📋', label: 'Step-by-step output', text: 'Provide the answer in clear, numbered steps.' },
+  { icon: '🔍', label: 'Give examples',       text: 'Include 2–3 concrete examples.' },
+  { icon: '⚠️', label: 'Avoid jargon',        text: 'Avoid technical jargon; explain simply.' },
+  { icon: '📏', label: 'Keep it short',       text: 'Keep your response under 200 words.' },
+  { icon: '💡', label: 'Explain why',         text: 'Explain the reasoning behind each point.' },
+  { icon: '🌍', label: 'Real-world use',      text: 'Give real-world, practical examples.' },
+  { icon: '🧪', label: 'Pros & cons',         text: 'List the pros and cons clearly.' },
+  { icon: '📊', label: 'Compare options',     text: 'Compare at least two approaches or options.' },
+  { icon: '🛠️', label: 'Actionable advice',   text: 'Make recommendations specific and actionable.' },
+  { icon: '🔒', label: 'Constraints',         text: 'Assume a budget/time constraint is in place.' },
+  { icon: '✅', label: 'Checklist format',    text: 'Format the response as a checklist.' },
+];
+
+const tipsGrid = document.getElementById('tips-grid');
+tips.forEach(tip => {
+  const chip = document.createElement('div');
+  chip.className = 'tip-chip';
+  chip.innerHTML = `<span class="tip-icon">${tip.icon}</span>${tip.label}`;
+  chip.title = tip.text;
+  chip.addEventListener('click', () => {
+    const cur = inputEl.value.trim();
+    inputEl.value = cur ? cur + '\n\n' + tip.text : tip.text;
+    document.getElementById('char-count').textContent = inputEl.value.length + ' chars';
+    inputEl.focus();
+    chip.style.borderColor = 'var(--accent)';
+    chip.style.color = 'var(--accent)';
+    setTimeout(() => { chip.style.borderColor = ''; chip.style.color = ''; }, 600);
+  });
+  tipsGrid.appendChild(chip);
+});
+
+/* =========================================================
+   SYSTEM PROMPT (used by API path)
+   ========================================================= */
+function buildSystemPrompt(tool, taskType, tone, format, detail) {
+  const toolGuides = {
+    chatgpt: `You are an expert prompt engineer specialising in ChatGPT (OpenAI GPT-4o). ChatGPT responds best to clear, role-based instructions, explicit formatting requests, and direct task descriptions.`,
+    gemini:  `You are an expert prompt engineer specialising in Google Gemini. Gemini excels with factual, research-heavy, and multimodal queries and benefits from specifying the desired depth of factual accuracy.`,
+    claude:  `You are an expert prompt engineer specialising in Anthropic Claude. Claude excels with nuanced reasoning and long documents. It benefits from XML-style structure and clear context-setting.`,
+    grok:    `You are an expert prompt engineer specialising in xAI Grok. Grok has real-time internet access and benefits from direct, punchy prompts with a conversational, sharp style.`,
+  };
+  return `${toolGuides[tool]}
+
+Transform the user's unstructured raw input into a single, high-quality, ready-to-use prompt optimised for ${tool}.
+
+Rules:
+- Task type: ${taskType} | Tone: ${tone} | Output format: ${format} | Detail: ${detail}
+- Output ONLY the final prompt — no preamble, no explanation, no markdown fences.
+- The prompt must be self-contained, with role, objective, constraints and format woven in naturally.`;
+}
+
+/* =========================================================
+   OFFLINE TEMPLATE ENGINE (fallback)
+   ========================================================= */
+function buildOfflinePrompt(raw, tool, taskType, tone, format, detail) {
+
+  // 1. Role lines per tool
+  const roleMap = {
+    chatgpt: 'You are a knowledgeable and helpful assistant.',
+    gemini:  'You are a thorough, fact-focused research assistant with access to up-to-date information.',
+    claude:  'You are a careful, nuanced thinker who reasons through problems step by step.',
+    grok:    'You are a sharp, direct assistant with real-time web access who gets straight to the point.',
+  };
+
+  // 2. Task opener per type
+  const taskOpener = {
+    general:   'Please help me with the following:',
+    writing:   'Please write or edit the following:',
+    coding:    'Please help me with this coding or technical task:',
+    analysis:  'Please analyse and provide insights on the following:',
+    creative:  'Please brainstorm and generate creative ideas for:',
+    summarize: 'Please provide a clear, concise summary of:',
+    qa:        'Please explain the following clearly and thoroughly:',
+    email:     'Please draft a professional communication for the following situation:',
+    plan:      'Please create a structured plan or strategy for:',
+  };
+
+  // 3. Tone instruction
+  const toneMap = {
+    professional: 'Use a professional, polished tone throughout.',
+    casual:       'Use a friendly, conversational tone — keep it approachable.',
+    concise:      'Be concise and direct. No fluff.',
+    detailed:     'Be thorough and detailed. Cover all angles.',
+    academic:     'Use a formal, academic tone with precise language.',
+    creative:     'Be expressive and creative — feel free to use vivid language.',
+  };
+
+  // 4. Format instruction
+  const formatMap = {
+    freeform:  'Present your response as flowing prose.',
+    bullets:   'Use bullet points for your response.',
+    numbered:  'Structure your response as a numbered list.',
+    table:     'Present the information in a well-organised table.',
+    json:      'Return your response as valid JSON only.',
+    code:      'Wrap all code in appropriate code blocks with language labels.',
+    markdown:  'Format the entire response as a well-structured Markdown document with headings.',
+  };
+
+  // 5. Detail instruction
+  const detailMap = {
+    concise:  'Keep the response brief — aim for the essentials only.',
+    moderate: 'Provide a moderately detailed response.',
+    thorough: 'Be comprehensive. Leave no important aspect unaddressed.',
+  };
+
+  // 6. Tool-specific closing hints
+  const toolHints = {
+    chatgpt: '',
+    gemini:  '\n\nWhere relevant, cite sources or indicate confidence level in factual claims.',
+    claude:  '\n\n<context>\nProvide your reasoning transparently. If something is ambiguous, say so.\n</context>',
+    grok:    '\n\nSearch the web if needed to include current, real-world data.',
+  };
+
+  const role     = roleMap[tool] || roleMap.chatgpt;
+  const opener   = taskOpener[taskType] || taskOpener.general;
+  const toneStr  = toneMap[tone] || '';
+  const fmtStr   = formatMap[format] || '';
+  const detStr   = detailMap[detail] || '';
+  const hint     = toolHints[tool] || '';
+
+  // Clean up raw input — capitalise first letter
+  const cleanRaw = raw.charAt(0).toUpperCase() + raw.slice(1);
+
+  return `${role}
+
+${opener}
+
+${cleanRaw}
+
+---
+Instructions:
+- ${toneStr}
+- ${fmtStr}
+- ${detStr}${hint}`;
+}
+
+/* =========================================================
+   MAIN CONVERT — tries API, falls back to template
+   ========================================================= */
+async function convertPrompt() {
+  const raw = inputEl.value.trim();
+  if (!raw) { shake(inputEl); return; }
+
+  lastInput = raw;
+  const tool     = selectedTool;
+  const taskType = document.getElementById('task-type').value;
+  const tone     = document.getElementById('tone').value;
+  const format   = document.getElementById('output-format').value;
+  const detail   = document.getElementById('detail').value;
+
+  const btn         = document.getElementById('convert-btn');
+  const outputPanel = document.getElementById('output-panel');
+  const outputText  = document.getElementById('output-text');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+  outputPanel.classList.remove('visible');
+  outputText.innerHTML = '';
+
+  let result  = null;
+  let usedAPI = false;
+
+  // ── Try API if key is present ──
+  if (apiKey) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: buildSystemPrompt(tool, taskType, tone, format, detail),
+          messages: [{ role: 'user', content: raw }],
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.content?.map(c => c.text || '').join('') || '';
+        if (text) { result = text; usedAPI = true; }
+      }
+      // If not ok — fall through to offline
+    } catch (e) {
+      // Network error — fall through to offline
+    }
+  }
+
+  // ── Fallback to offline template ──
+  if (!result) {
+    result = buildOfflinePrompt(raw, tool, taskType, tone, format, detail);
+    setApiStatus(apiKey ? 'fallback' : 'offline');
+  } else {
+    setApiStatus('live');
+  }
+
+  // ── Reveal output ──
+  outputPanel.classList.add('visible');
+  document.getElementById('output-label').textContent =
+    `✦ ${tool.charAt(0).toUpperCase() + tool.slice(1)} Prompt` +
+    (usedAPI ? '' : ' · Offline');
+
+  await typewriter(outputText, result);
+  document.getElementById('output-char-count').textContent = result.length + ' chars';
+
+  // ── Save to history ──
+  const entry = {
+    tool, taskType,
+    preview: raw.slice(0, 60) + (raw.length > 60 ? '…' : ''),
+    prompt: result,
+    mode: usedAPI ? 'ai' : 'template',
+    ts: Date.now()
+  };
+  history.unshift(entry);
+  if (history.length > 10) history = history.slice(0, 10);
+  localStorage.setItem('pf_history', JSON.stringify(history));
+  renderHistory();
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+/* =========================================================
+   TYPEWRITER
+   ========================================================= */
+async function typewriter(el, text) {
+  el.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+  let i = 0;
+  const chunk = 4;
+  return new Promise(resolve => {
+    const interval = setInterval(() => {
+      if (i >= text.length) {
+        clearInterval(interval);
+        cursor.remove();
+        el.textContent = text;
+        resolve();
+        return;
+      }
+      el.textContent = text.slice(0, i + chunk);
+      el.appendChild(cursor);
+      i += chunk;
+      el.scrollTop = el.scrollHeight;
+    }, 10);
+  });
+}
+
+function regenerate() { if (lastInput) convertPrompt(); }
+
+function clearAll() {
+  inputEl.value = '';
+  document.getElementById('char-count').textContent = '0 chars';
+  document.getElementById('output-panel').classList.remove('visible');
+  document.getElementById('output-text').textContent = '';
+  lastInput = '';
+}
+
+/* =========================================================
+   COPY
+   ========================================================= */
+function copyPrompt() {
+  const text = document.getElementById('output-text').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('success');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove('success');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+    }, 2000);
+  });
+}
+
+/* =========================================================
+   HISTORY
+   ========================================================= */
+const toolColors = { chatgpt: '#10a37f', gemini: '#4285f4', claude: '#d97757', grok: '#aaa' };
+
+function renderHistory() {
+  if (!history.length) { document.getElementById('history-section').style.display = 'none'; return; }
+  document.getElementById('history-section').style.display = 'block';
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  history.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    const modeLabel = item.mode === 'ai'
+      ? `<span style="font-size:10px;color:#10a37f;margin-left:4px">AI</span>`
+      : `<span style="font-size:10px;color:var(--accent2);margin-left:4px">TPL</span>`;
+    el.innerHTML = `
+      <span class="h-tool" style="color:${toolColors[item.tool] || '#aaa'}">${item.tool}${modeLabel}</span>
+      <span class="h-text">${escHtml(item.preview)}</span>
+      <span class="h-time">${timeAgo(item.ts)}</span>`;
+    el.addEventListener('click', () => {
+      document.getElementById('output-text').textContent = item.prompt;
+      document.getElementById('output-char-count').textContent = item.prompt.length + ' chars';
+      document.getElementById('output-label').textContent =
+        `✦ ${item.tool.charAt(0).toUpperCase()+item.tool.slice(1)} Prompt` +
+        (item.mode === 'ai' ? '' : ' · Offline');
+      document.getElementById('output-panel').classList.add('visible');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    list.appendChild(el);
+  });
+}
+
+function timeAgo(ts) {
+  const d = (Date.now() - ts) / 1000;
+  if (d < 60)    return 'just now';
+  if (d < 3600)  return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  return Math.floor(d/86400) + 'd ago';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* =========================================================
+   SHAKE
+   ========================================================= */
+function shake(el) {
+  const steps = [6,-6,4,-4,2,-2,0];
+  let i = 0;
+  const go = () => {
+    if (i >= steps.length) { el.style.transform = ''; return; }
+    el.style.transform = `translateX(${steps[i++]}px)`;
+    setTimeout(go, 50);
+  };
+  go();
+  el.focus();
+}
+
+/* =========================================================
+   KEYBOARD SHORTCUT
+   ========================================================= */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') convertPrompt();
+});
+</script>
+</body>
+</html>
